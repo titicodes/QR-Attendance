@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "994501797261",
+    "project_id": "qr-atten-sys",
+    "storage_bucket": "qr-atten-sys.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:994501797261:android:25db2a614c8fb5965149c4",
+        "android_client_info": {
+          "package_name": "com.example.qr_attemdance"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0OvdrqwJDVBkgJmqde4EjXXokX0pyAJY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
