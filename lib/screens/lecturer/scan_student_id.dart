@@ -15,6 +15,7 @@ class _ScanStudentIDPageState extends State<ScanStudentIDPage> {
   String scannedData = '';
   bool isScanning = false;
 
+  // Function to handle QR code scanning
   void _onBarcodeScanned(BarcodeCapture? barcodeCapture) {
     if (barcodeCapture != null &&
         barcodeCapture.barcodes.isNotEmpty &&
@@ -24,76 +25,57 @@ class _ScanStudentIDPageState extends State<ScanStudentIDPage> {
         scannedData = barcodeCapture.barcodes.first.rawValue ?? '';
       });
 
-      // Verify the student identity with the scanned data
-      verifyStudentIdentity(scannedData);
-    }
-  }
+      // Assuming the scanned data is in a specific format: "studentId|name|regNumber"
+      var dataParts = scannedData.split('|');
+      if (dataParts.length == 3) {
+        String studentId = dataParts[0];
+        String studentName = dataParts[1];
+        String studentRegNumber = dataParts[2];
 
-  Future<void> verifyStudentIdentity(String studentId) async {
-    if (studentId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('No student ID scanned.'),
-      ));
-      setState(() {
-        isScanning = false;
-      });
-      return;
-    }
-
-    try {
-      DocumentSnapshot studentDoc = await FirebaseFirestore.instance
-          .collection('students')
-          .doc(studentId)
-          .get();
-
-      if (studentDoc.exists) {
-        String studentName = studentDoc['name'];
-        String studentRegNumber = studentDoc['regNumber'];
-
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Student Verified'),
-            content: Text('Name: $studentName\nReg Number: $studentRegNumber'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  saveAttendance(studentId);
-                },
-                child: const Text('Confirm'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  setState(() {
-                    scannedData = '';
-                    isScanning = false;
-                  });
-                },
-                child: const Text('Cancel'),
-              ),
-            ],
-          ),
-        );
+        // Show and verify the student identity with the scanned data
+        _showVerificationDialog(studentId, studentName, studentRegNumber);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Student not found.'),
+          content: Text('Invalid QR code format.'),
         ));
         setState(() {
           isScanning = false;
         });
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Error fetching student data.'),
-      ));
-      setState(() {
-        isScanning = false;
-      });
     }
   }
 
+  // Show dialog to confirm student information
+  void _showVerificationDialog(String studentId, String studentName, String studentRegNumber) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Student Information'),
+        content: Text('Name: $studentName\nReg Number: $studentRegNumber'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              saveAttendance(studentId); // Save attendance using studentId
+            },
+            child: const Text('Confirm'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              setState(() {
+                scannedData = '';
+                isScanning = false;
+              });
+            },
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Save attendance in Firestore
   Future<void> saveAttendance(String studentId) async {
     try {
       await FirebaseFirestore.instance
@@ -116,6 +98,9 @@ class _ScanStudentIDPageState extends State<ScanStudentIDPage> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Failed to record attendance.'),
       ));
+      setState(() {
+        isScanning = false;
+      });
     }
   }
 

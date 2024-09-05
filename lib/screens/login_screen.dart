@@ -16,6 +16,7 @@ class _LoginPageState extends State<LoginPage> {
   String email = '';
   String password = '';
   String errorMessage = '';
+  bool isLoading = false; // Loading state
 
   @override
   Widget build(BuildContext context) {
@@ -73,11 +74,21 @@ class _LoginPageState extends State<LoginPage> {
                         textStyle: const TextStyle(fontSize: 18, color: Colors.blueAccent),
                         minimumSize: Size(double.infinity, 50), // Full width
                       ),
-                      child: const Text('Login'),
-                      onPressed: () async {
+                      child: isLoading
+                          ? const CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+                            )
+                          : const Text('Login'),
+                      onPressed: isLoading ? null : () async { // Disable button while loading
                         if (_formKey.currentState!.validate()) {
                           _formKey.currentState!.save();
+                          setState(() {
+                            isLoading = true; // Start loading
+                          });
                           AppUser? user = await _auth.signIn(email, password);
+                          setState(() {
+                            isLoading = false; // Stop loading
+                          });
                           if (user != null) {
                             _navigateToHomeScreen(user);
                           } else {

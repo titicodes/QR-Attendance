@@ -18,6 +18,7 @@ class _SignUpPageState extends State<SignUpPage> {
   String fullName = '';
   String phoneNumber = '';
   String role = 'student'; // default role
+  bool isLoading = false; // Loading state
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +84,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       child: Text(value),
                     );
                   }).toList(),
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Role',
                     border: OutlineInputBorder(),
                     filled: true,
@@ -99,23 +100,36 @@ class _SignUpPageState extends State<SignUpPage> {
                       backgroundColor: Colors.blueAccent,
                       textStyle: const TextStyle(fontSize: 18),
                     ),
-                    child: const Text(
-                      'Sign Up',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600),
-                    ),
-                    onPressed: () async {
-                      if (_formKey.currentState!.validate()) {
-                        _formKey.currentState!.save();
-                        AppUser? user = await _auth.signUp(
-                            email, password, role, fullName, phoneNumber);
-                        if (user != null) {
-                          _navigateToLoginScreen(); // Navigate to the login screen
-                        }
-                      }
-                    },
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                            if (_formKey.currentState!.validate()) {
+                              _formKey.currentState!.save();
+                              setState(() {
+                                isLoading = true; // Start loading
+                              });
+                              AppUser? user = await _auth.signUp(
+                                  email, password, role, fullName, phoneNumber);
+                              setState(() {
+                                isLoading = false; // Stop loading
+                              });
+                              if (user != null) {
+                                _navigateToLoginScreen(); // Navigate to the login screen
+                              }
+                            }
+                          },
+                    child: isLoading
+                        ? const CircularProgressIndicator(
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          )
+                        : const Text(
+                            'Sign Up',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 20),

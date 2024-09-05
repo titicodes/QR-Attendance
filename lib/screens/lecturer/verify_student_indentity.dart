@@ -3,12 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 class VerifyStudentIdentityPage extends StatefulWidget {
-  final String? sessionId; // Make sessionId optional
+  final String? sessionId; // Session ID to associate attendance
 
   const VerifyStudentIdentityPage({super.key, this.sessionId});
 
   @override
-  _VerifyStudentIdentityPageState createState() => _VerifyStudentIdentityPageState();
+  _VerifyStudentIdentityPageState createState() =>
+      _VerifyStudentIdentityPageState();
 }
 
 class _VerifyStudentIdentityPageState extends State<VerifyStudentIdentityPage> {
@@ -18,10 +19,13 @@ class _VerifyStudentIdentityPageState extends State<VerifyStudentIdentityPage> {
   bool isScanning = false; // Prevent multiple scans while processing
 
   void _onBarcodeScanned(BarcodeCapture? barcodeCapture) {
-    if (barcodeCapture != null && barcodeCapture.barcodes.isNotEmpty && !isScanning) {
+    if (barcodeCapture != null &&
+        barcodeCapture.barcodes.isNotEmpty &&
+        !isScanning) {
       setState(() {
         isScanning = true;
-        scannedData = barcodeCapture.barcodes.first.rawValue ?? ''; // Get the first barcode's rawValue
+        scannedData = barcodeCapture.barcodes.first.rawValue ??
+            ''; // Get the first barcode's rawValue
         parseScannedData(scannedData);
       });
 
@@ -31,6 +35,7 @@ class _VerifyStudentIdentityPageState extends State<VerifyStudentIdentityPage> {
   }
 
   void parseScannedData(String data) {
+    // Assuming the QR code data follows the "name:<name>;regNumber:<number>" format
     List<String> parts = data.split(';');
     for (String part in parts) {
       if (part.startsWith('name:')) {
@@ -42,17 +47,17 @@ class _VerifyStudentIdentityPageState extends State<VerifyStudentIdentityPage> {
   }
 
   Future<void> recordAttendance() async {
-    try {
-      if (studentName.isEmpty || studentRegNumber.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Invalid student data. Attendance not recorded.'),
-        ));
-        setState(() {
-          isScanning = false; // Reset scanning flag
-        });
-        return;
-      }
+    if (studentName.isEmpty || studentRegNumber.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Invalid student data. Attendance not recorded.'),
+      ));
+      setState(() {
+        isScanning = false; // Reset scanning flag
+      });
+      return;
+    }
 
+    try {
       // Prepare data for Firestore
       Map<String, dynamic> attendanceData = {
         'studentName': studentName,
@@ -63,13 +68,13 @@ class _VerifyStudentIdentityPageState extends State<VerifyStudentIdentityPage> {
 
       // Store attendance record in Firestore under the specific session
       await FirebaseFirestore.instance
-          .collection('sessions')
+          .collection('class_sessions')
           .doc(widget.sessionId)
-          .collection('attendance')
+          .collection('attendances')
           .add(attendanceData);
 
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Attendance recorded successfully!'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Attendance recorded for $studentRegNumber'),
       ));
 
       setState(() {
@@ -100,7 +105,8 @@ class _VerifyStudentIdentityPageState extends State<VerifyStudentIdentityPage> {
           ),
           if (studentName.isNotEmpty || studentRegNumber.isNotEmpty) ...[
             const SizedBox(height: 20),
-            Text('Student Information:', style: Theme.of(context).textTheme.titleLarge),
+            Text('Student Information:',
+                style: Theme.of(context).textTheme.titleLarge),
             Text('Name: $studentName'),
             Text('Registration Number: $studentRegNumber'),
           ],
