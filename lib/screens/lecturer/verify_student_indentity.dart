@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class VerifyStudentIdentityPage extends StatefulWidget {
   final String? sessionId; // Session ID to associate attendance
@@ -14,42 +17,29 @@ class VerifyStudentIdentityPage extends StatefulWidget {
 
 class _VerifyStudentIdentityPageState extends State<VerifyStudentIdentityPage> {
   String scannedData = '';
-  String studentName = '';
-  String studentRegNumber = '';
+  Uint8List? scannedImage; // Store the image of the scanned ID
   bool isScanning = false; // Prevent multiple scans while processing
 
-  void _onBarcodeScanned(BarcodeCapture? barcodeCapture) {
-    if (barcodeCapture != null &&
-        barcodeCapture.barcodes.isNotEmpty &&
-        !isScanning) {
+  // Handle QR code detection
+  void _onBarcodeScanned(BarcodeCapture barcodeCapture) {
+    if (barcodeCapture.barcodes.isNotEmpty && !isScanning) {
       setState(() {
-        isScanning = true;
-        scannedData = barcodeCapture.barcodes.first.rawValue ??
-            ''; // Get the first barcode's rawValue
-        parseScannedData(scannedData);
+        isScanning = true; // Lock scanning until processed
+        scannedData =
+            barcodeCapture.barcodes.first.rawValue ?? ''; // Extract raw value
+        scannedImage = barcodeCapture.image; // Capture the image
       });
 
-      // Record attendance after parsing data
-      recordAttendance();
+      // Send scanned data to Firestore
+      sendDataToFirestore(scannedData, scannedImage);
     }
   }
 
-  void parseScannedData(String data) {
-    // Assuming the QR code data follows the "name:<name>;regNumber:<number>" format
-    List<String> parts = data.split(';');
-    for (String part in parts) {
-      if (part.startsWith('name:')) {
-        studentName = part.substring(5);
-      } else if (part.startsWith('regNumber:')) {
-        studentRegNumber = part.substring(10);
-      }
-    }
-  }
-
-  Future<void> recordAttendance() async {
-    if (studentName.isEmpty || studentRegNumber.isEmpty) {
+  // Send scanned data and image to Firestore
+  Future<void> sendDataToFirestore(String data, Uint8List? image) async {
+    if (data.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Invalid student data. Attendance not recorded.'),
+        content: Text('No data scanned. Identity not verified.'),
       ));
       setState(() {
         isScanning = false; // Reset scanning flag
@@ -59,30 +49,44 @@ class _VerifyStudentIdentityPageState extends State<VerifyStudentIdentityPage> {
 
     try {
       // Prepare data for Firestore
-      Map<String, dynamic> attendanceData = {
-        'studentName': studentName,
-        'studentRegNumber': studentRegNumber,
+      Map<String, dynamic> identityData = {
+        'scannedData': data,
         'timestamp': FieldValue.serverTimestamp(),
         'sessionId': widget.sessionId,
       };
 
-      // Store attendance record in Firestore under the specific session
-      await FirebaseFirestore.instance
+      // Store identity verification record in Firestore under the specific session
+      DocumentReference docRef = await FirebaseFirestore.instance
           .collection('class_sessions')
           .doc(widget.sessionId)
-          .collection('attendances')
-          .add(attendanceData);
+          .collection('identity_verifications')
+          .add(identityData);
+
+      // If an image is captured, store it
+      if (image != null) {
+        // Convert image to a base64 string to store in Firestore
+        String base64Image = base64Encode(image);
+        await docRef.update({'scannedImage': base64Image});
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Attendance recorded for $studentRegNumber'),
+        content: Text('Data recorded: $data'),
       ));
 
+      // Launch URL if scanned data is a valid URL
+      if (Uri.tryParse(data)?.hasScheme == true) {
+        await launchUrl(Uri.parse(data));
+      }
+
+      // After saving, allow another scan
       setState(() {
         isScanning = false; // Reset scanning flag after processing
+        scannedData = ''; // Clear scanned data
+        scannedImage = null; // Clear image
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Failed to record attendance.'),
+        content: Text('Failed to record data.'),
       ));
 
       setState(() {
@@ -100,16 +104,33 @@ class _VerifyStudentIdentityPageState extends State<VerifyStudentIdentityPage> {
         children: [
           Expanded(
             child: MobileScanner(
-              onDetect: _onBarcodeScanned,
+              controller: MobileScannerController(
+                detectionSpeed: DetectionSpeed.normal,
+                returnImage:
+                    true, // Ensure images are returned with the QR code
+              ),
+              onDetect: _onBarcodeScanned, // Handle detection of the barcode
             ),
           ),
-          if (studentName.isNotEmpty || studentRegNumber.isNotEmpty) ...[
+          if (scannedData.isNotEmpty) ...[
             const SizedBox(height: 20),
-            Text('Student Information:',
+            Text('Scanned Data:',
                 style: Theme.of(context).textTheme.titleLarge),
-            Text('Name: $studentName'),
-            Text('Registration Number: $studentRegNumber'),
+            Text(scannedData),
+            const SizedBox(height: 20),
+            if (scannedImage != null)
+              Image.memory(
+                scannedImage!,
+                width: 200,
+                height: 200,
+                fit: BoxFit.contain,
+              ), // Display the scanned image
           ],
+          if (isScanning)
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: CircularProgressIndicator(),
+            ),
         ],
       ),
     );

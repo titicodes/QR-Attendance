@@ -6,8 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.qr_attemdance"
-    // compileSdk = flutter.compileSdkVersion
-     compileSdk = 34
+    compileSdk = 34 // Update to the latest SDK version
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -19,12 +18,16 @@ android {
         jvmTarget = "17"  // Ensure this is consistent with the Java version
     }
 
+    kotlin {
+        jvmToolchain {
+            languageVersion.set(JavaLanguageVersion.of(17))  // Ensure Kotlin uses JVM 17
+        }
+    }
+
     defaultConfig {
         applicationId = "com.example.qr_attemdance"
-        // minSdk = flutter.minSdkVersion
-        minSdk = 24
-        // targetSdk = flutter.targetSdkVersion
-        targetSdk = 34
+        minSdk = 24 // Ensure this aligns with your project requirements
+        targetSdk = 34 // Target the latest SDK
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

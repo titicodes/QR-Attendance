@@ -1,18 +1,13 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_attemdance/firebase_options.dart';
+import 'package:qr_attemdance/screens/admin/dmin_home.dart';
 import 'package:qr_attemdance/screens/lecturer/scan_student_id.dart';
 import 'package:qr_attemdance/screens/lecturer/verify_student_indentity.dart';
 import 'package:qr_attemdance/screens/login_screen.dart';
 import 'package:qr_attemdance/screens/signup_screen.dart';
 import 'package:qr_attemdance/screens/splash.dart';
-import 'screens/admin/dmin_home.dart';
 import 'screens/lecturer/lecturer_home_screen.dart';
-import 'screens/lecturer/create_class_session_page.dart';
-import 'screens/lecturer/manage_attendance_page.dart';
-import 'screens/students/student_home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +21,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primaryColor: Colors.blueAccent,
         scaffoldBackgroundColor: Colors.white,
@@ -53,15 +49,14 @@ class MyApp extends StatelessWidget {
       ),
       home: const AuthChecker(),
       routes: {
-        //'/': (context) => const AuthChecker(),
         '/login': (context) => const LoginPage(),
         '/signUp': (context) => const SignUpPage(),
         '/adminHome': (context) => const AdminHomePage(),
         '/lecturerHome': (context) => const LecturerHomePage(),
-        '/createSession': (context) => const CreateClassSessionPage(),
-        '/manageAttendance': (context) => const ManageAttendancePage(),
+        // '/manageAttendance': (context) => const ManageAttendancePage(
+        //     sessionId: ''), // Pass sessionId dynamically in LecturerHomePage
         '/scanStudentID': (context) => const ScanStudentIDPage(
-            sessionId: ''), // This should be replaced by a dynamic sessionId
+            sessionId: ''), // Also pass sessionId dynamically
         '/verifyStudentIdentity': (context) =>
             const VerifyStudentIdentityPage(),
         '/error': (context) => const ErrorPage(),

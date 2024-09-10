@@ -3,7 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'scan_student_id.dart';
 
 class CreateClassSessionPage extends StatefulWidget {
-  const CreateClassSessionPage({super.key});
+  final Function(String) onSessionCreated; // Callback to send sessionId
+
+  const CreateClassSessionPage({super.key, required this.onSessionCreated});
 
   @override
   _CreateClassSessionPageState createState() => _CreateClassSessionPageState();
@@ -21,8 +23,9 @@ class _CreateClassSessionPageState extends State<CreateClassSessionPage> {
   Future<void> _createSession() async {
     if (_formKey.currentState?.validate() ?? false) {
       // Add session data to Firestore
-      DocumentReference sessionRef =
-          await FirebaseFirestore.instance.collection('class_sessions').add({
+      DocumentReference sessionRef = await FirebaseFirestore.instance
+          .collection('class_sessions')
+          .add({
         'courseTitle': courseTitle,
         'courseCode': courseCode,
         'date': date,
@@ -31,7 +34,10 @@ class _CreateClassSessionPageState extends State<CreateClassSessionPage> {
         'venue': venue,
       });
 
-      // Navigate to ScanStudentIDPage after session creation
+      // Send sessionId back to home page
+      widget.onSessionCreated(sessionRef.id);
+
+      // Navigate to ScanStudentIDPage with the created sessionId
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -67,10 +73,8 @@ class _CreateClassSessionPageState extends State<CreateClassSessionPage> {
                 _buildTextField('Venue', (value) => venue = value),
                 const SizedBox(height: 20),
                 Center(
-                  // Center the button
                   child: SizedBox(
-                    width: double
-                        .infinity, // Make the button width match the text fields
+                    width: double.infinity, // Full width button
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 15),
